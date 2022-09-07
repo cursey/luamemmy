@@ -1,5 +1,5 @@
-use mlua::prelude::*;
 use memmy::*;
+use mlua::prelude::*;
 
 #[mlua::lua_module]
 fn luamemmy(lua: &Lua) -> LuaResult<LuaTable> {
@@ -196,6 +196,15 @@ fn luamemmy(lua: &Lua) -> LuaResult<LuaTable> {
 
     // module_span
     mem.set(
+        "module_span",
+        lua.create_function(|lua, name: String| match module_span(name.as_str()) {
+            Some(span) => (span.as_ptr() as usize, span.len()).to_lua_multi(lua),
+            None => Ok(mlua::MultiValue::new()),
+        })?,
+    )?;
+
+    // module_len
+    mem.set(
         "module_len",
         lua.create_function(|_, name: String| match module_span(name.as_str()) {
             Some(m) => Ok(Some(m.len())),
@@ -205,7 +214,6 @@ fn luamemmy(lua: &Lua) -> LuaResult<LuaTable> {
 
     Ok(mem)
 }
-
 
 #[cfg(test)]
 mod test {
@@ -355,6 +363,26 @@ mod test {
         let script = r#"return mem.module("nonexistent")"#;
 
         assert!(lua.load(script).eval::<Option<usize>>().unwrap().is_none());
+    }
+
+    #[test]
+    fn mem_module_span() {
+        let lua = Lua::new();
+        register(&lua).unwrap();
+
+        let script = r#"return mem.module_span("kernel32")"#;
+        let result = lua.load(script).eval::<(usize, usize)>();
+
+        assert!(result.is_ok());
+
+        let (start, len) = result.unwrap();
+
+        assert!(start > 0);
+        assert!(len > 0);
+
+        let script = r#"return mem.module_span("nonexistent")"#;
+
+        assert!(lua.load(script).eval::<(usize, usize)>().is_err());
     }
 
     #[test]
