@@ -10,12 +10,11 @@ crate-type = ["cdylib"]
 
 [dependencies]
 mlua = { version = "0.8.3", features = ["lua54", "module"] }
-memmy = "0.1.0"
+memmy = "0.2.0"
 
 [dependencies.windows]
-version = "0.37.0"
+version = "0.39.0"
 features = [
-    "alloc",
     "Win32_Foundation",
     "Win32_System_SystemServices",
     "Win32_UI_WindowsAndMessaging",

@@ -212,6 +212,15 @@ fn luamemmy(lua: &Lua) -> LuaResult<LuaTable> {
         })?,
     )?;
 
+    // module_section
+    mem.set(
+        "module_section",
+        lua.create_function(|lua, (name, section): (String, String)| match module_section(name.as_str(), section.as_str()) {
+            Some(section) => (section.as_ptr() as usize, section.len()).to_lua_multi(lua),
+            None => Ok(mlua::MultiValue::new()),
+        })?,
+    )?;
+
     Ok(mem)
 }
 
@@ -397,5 +406,29 @@ mod test {
         let script = r#"return mem.module_len("nonexistent")"#;
 
         assert!(lua.load(script).eval::<Option<usize>>().unwrap().is_none());
+    }
+
+    #[test]
+    fn mem_module_section() {
+        let lua = Lua::new();
+        register(&lua).unwrap();
+
+        let script = r#"return mem.module_section("kernel32", ".text")"#;
+        let result = lua.load(script).eval::<(usize, usize)>();
+
+        assert!(result.is_ok());
+
+        let (start, len) = result.unwrap();
+
+        assert!(start > 0);
+        assert!(len > 0);
+
+        let script = r#"return mem.module_section("kernel32", ".asdf")"#;
+
+        assert!(lua.load(script).eval::<(usize, usize)>().is_err());
+
+        let script = r#"return mem.module_section("nonexistent", ".text")"#;
+
+        assert!(lua.load(script).eval::<(usize, usize)>().is_err());
     }
 }
